@@ -99,10 +99,10 @@ for task in tasks:
     listener = make_listener()
     negotiator = make_negotiator()
 
-    groupchat = GroupChat(
+    groupchat = GroupChat(  
         agents=[user, speaker, listener, negotiator],
         messages=[],
-        max_rounds=6,
+        max_round=6,
     )
     manager = GroupChatManager(groupchat=groupchat)
 
@@ -118,8 +118,7 @@ for task in tasks:
         content = msg.get("content", "")
 
         if sender == "Speaker" and "Option A:" in content and "Option B:" in content:
-            logger.info(f"Speaker proposals:
-{content}")
+            logger.info(f"Speaker proposals:{content}")
             match_a = re.search(r"Option A:\s*(\w{1,6})", content)
             if match_a:
                 option_a = match_a.group(1)
