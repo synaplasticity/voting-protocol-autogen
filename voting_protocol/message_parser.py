@@ -13,11 +13,11 @@ class MessageParser:
         option_a = None
         option_b = None
         
-        match_a = re.search(r"Option A:\s*(\w{1,6})", content)
+        match_a = re.search(r"Option A:\s*(\b\w{1,6}\b)", content)
         if match_a:
             option_a = match_a.group(1)
             
-        match_b = re.search(r"Option B:\s*(\w{1,6})", content)
+        match_b = re.search(r"Option B:\s*(\b\w{1,6}\b)", content)
         if match_b:
             option_b = match_b.group(1)
             
