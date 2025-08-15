@@ -106,7 +106,7 @@ class TestMessageParser(unittest.TestCase):
         self.assertEqual(result["option_b"], "WTHPR")
         self.assertEqual(result["listener_vote"], "A")
         self.assertEqual(result["final_selection"], "A")
-        self.assertEqual(result["selected_symbol"], "WXPAR")
+        self.assertEqual(result["final_symbol"], "WXPAR")
     
     def test_parse_group_chat_messages_incomplete(self):
         """Test parsing incomplete group chat messages."""
@@ -123,7 +123,7 @@ class TestMessageParser(unittest.TestCase):
         self.assertIsNone(result["option_b"])
         self.assertIsNone(result["listener_vote"])
         self.assertIsNone(result["final_selection"])
-        self.assertIsNone(result["selected_symbol"])
+        self.assertIsNone(result["final_symbol"])
     
     def test_parse_group_chat_messages_empty(self):
         """Test parsing empty group chat messages."""
@@ -135,7 +135,7 @@ class TestMessageParser(unittest.TestCase):
         self.assertIsNone(result["option_b"])
         self.assertIsNone(result["listener_vote"])
         self.assertIsNone(result["final_selection"])
-        self.assertIsNone(result["selected_symbol"])
+        self.assertIsNone(result["final_symbol"])
 
 
 if __name__ == '__main__':
