@@ -20,15 +20,15 @@ class TestMessageParser(unittest.TestCase):
     
     def test_extract_speaker_proposals_partial(self):
         """Test extracting proposals when only one option is present."""
-        content_a_only = "Option A: TESTSYM - Test symbol"
+        content_a_only = "Option A: TSTSYM - Test symbol"
         option_a, option_b = MessageParser.extract_speaker_proposals(content_a_only)
-        self.assertEqual(option_a, "TESTSYM")
+        self.assertEqual(option_a, "TSTSYM")
         self.assertIsNone(option_b)
         
-        content_b_only = "Option B: ANOTHERSYM - Another symbol"
+        content_b_only = "Option B: ANTSYM - Another symbol"
         option_a, option_b = MessageParser.extract_speaker_proposals(content_b_only)
         self.assertIsNone(option_a)
-        self.assertEqual(option_b, "ANOTHERSYM")
+        self.assertEqual(option_b, "ANTSYM")
     
     def test_extract_speaker_proposals_none(self):
         """Test extracting proposals when no valid options are present."""
@@ -113,13 +113,13 @@ class TestMessageParser(unittest.TestCase):
         messages = [
             {
                 "name": "Speaker",
-                "content": "Option A: TESTSYM - Test symbol"
+                "content": "Option A: TSTSYM - Test symbol"
             }
         ]
         
         result = MessageParser.parse_group_chat_messages(messages)
         
-        self.assertEqual(result["option_a"], "TESTSYM")
+        self.assertEqual(result["option_a"], "TSTSYM")
         self.assertIsNone(result["option_b"])
         self.assertIsNone(result["listener_vote"])
         self.assertIsNone(result["final_selection"])
