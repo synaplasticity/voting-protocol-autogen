@@ -109,21 +109,20 @@ class TestMessageParser(unittest.TestCase):
         self.assertEqual(result["final_symbol"], "WXPAR")
     
     def test_parse_group_chat_messages_incomplete(self):
-        """Test parsing incomplete group chat messages."""
+        """Test parsing incomplete group chat messages raises ValueError."""
         messages = [
             {
                 "name": "Speaker",
-                "content": "Option A: TSTSYM - Test symbol"
+                "content": "Option A: TSTSYM - Test symbol"  # Missing Option B
             }
         ]
         
-        result = MessageParser.parse_group_chat_messages(messages)
-        
-        self.assertEqual(result["option_a"], "TSTSYM")
-        self.assertIsNone(result["option_b"])
-        self.assertIsNone(result["listener_vote"])
-        self.assertIsNone(result["final_selection"])
-        self.assertIsNone(result["final_symbol"])
+        with self.assertRaises(ValueError) as context:
+            MessageParser.parse_group_chat_messages(messages)
+        self.assertEqual(
+            str(context.exception),
+            "Speaker's message must contain both Option A and Option B"
+        )
     
     def test_parse_group_chat_messages_empty(self):
         """Test parsing empty group chat messages."""

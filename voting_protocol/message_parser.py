@@ -42,7 +42,17 @@ class MessageParser:
     
     @staticmethod
     def parse_group_chat_messages(messages: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Parse all messages from a group chat and extract voting information."""
+        """Parse all messages from a group chat and extract voting information.
+        
+        Args:
+            messages: List of message dictionaries with 'name' and 'content' keys
+            
+        Returns:
+            Dictionary containing extracted voting information
+            
+        Raises:
+            ValueError: If Speaker's message doesn't contain both Option A and Option B
+        """
         result = {
             "option_a": None,
             "option_b": None,
@@ -55,10 +65,16 @@ class MessageParser:
             sender = msg.get("name", "")
             content = msg.get("content", "")
             
-            if sender == "Speaker" and "Option A:" in content and "Option B:" in content:
-                option_a, option_b = MessageParser.extract_speaker_proposals(content)
-                result["option_a"] = option_a
-                result["option_b"] = option_b
+            if sender == "Speaker":
+                has_option_a = "Option A:" in content
+                has_option_b = "Option B:" in content
+                
+                if has_option_a and has_option_b:
+                    option_a, option_b = MessageParser.extract_speaker_proposals(content)
+                    result["option_a"] = option_a
+                    result["option_b"] = option_b
+                elif has_option_a or has_option_b:
+                    raise ValueError("Speaker's message must contain both Option A and Option B")
             
             elif sender == "Listener":
                 vote = MessageParser.extract_listener_vote(content)
