@@ -59,8 +59,7 @@ class TestVotingSystem(unittest.TestCase):
         mock_manager_instance = MagicMock()
         mock_manager.return_value = mock_manager_instance
         
-        # Mock the chat result
-        mock_manager_instance.initiate_chat.return_value = MagicMock()
+        # Mock the chat messages
         mock_groupchat_instance.messages = [
             {"name": "Speaker", "content": "Option A: TEST1 - Test\nOption B: TEST2 - Test"},
             {"name": "Listener", "content": "I vote for Option A"},
@@ -80,8 +79,11 @@ class TestVotingSystem(unittest.TestCase):
         mock_group_chat.assert_called_once()
         mock_manager.assert_called_once()
         
-        # Verify chat was initiated
-        mock_manager_instance.initiate_chat.assert_called_once()
+        # Verify chat was initiated on the user agent
+        mock_user.initiate_chat.assert_called_once_with(
+            mock_manager_instance,
+            message="Please compress this task: Test task"
+        )
         
         self.assertIsNotNone(result)
     
