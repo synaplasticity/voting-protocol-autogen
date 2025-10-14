@@ -4,6 +4,7 @@ import random
 from typing import Dict, Any
 from autogen import AssistantAgent, UserProxyAgent
 from .config import Config
+from .anyllm_client import CustomAnyLLMClient
 
 
 class AgentFactory:
@@ -24,7 +25,7 @@ class AgentFactory:
         )
         personality = AgentFactory.get_random_personality()
         
-        return AssistantAgent(
+        agent = AssistantAgent(
             name="Speaker",
             system_message=f"""
 You receive a task and propose two short symbolic names for it (each max {Config.MAX_SYMBOL_LENGTH} characters).
@@ -36,38 +37,59 @@ Example:
 Option A: WXPAR - Get weather in Paris
 Option B: WTHPR - Weather Paris
 Only output these two lines.
-"""
+""",
+            llm_config=Config.get_llm_config(use_anyllm=True)
         )
+        if hasattr(agent, "client") and agent.client is not None:
+            try:
+                agent.client.register_model_client(CustomAnyLLMClient)
+            except Exception:
+                pass
+        return agent
     
     @staticmethod
     def create_listener() -> AssistantAgent:
         """Create a Listener agent that votes on proposals."""
         personality = AgentFactory.get_random_personality()
         
-        return AssistantAgent(
+        agent = AssistantAgent(
             name="Listener",
             system_message=f"""
 You receive two symbolic task codes.
 Vote for the one that you think best represents the task clearly and efficiently.
 Just say "I vote for Option A" or "I vote for Option B" with a short reason.
 Your personality is: {personality} — base your reasoning style on it.
-"""
+""",
+            llm_config=Config.get_llm_config(use_anyllm=True)
         )
+        if hasattr(agent, "client") and agent.client is not None:
+            try:
+                agent.client.register_model_client(CustomAnyLLMClient)
+            except Exception:
+                pass
+        return agent
     
     @staticmethod
     def create_negotiator() -> AssistantAgent:
         """Create a Negotiator agent that makes final decisions."""
         personality = AgentFactory.get_random_personality()
         
-        return AssistantAgent(
+        agent = AssistantAgent(
             name="Negotiator",
             system_message=f"""
 You receive the Speaker's proposals and Listener's vote.
 Make the final decision on which symbolic code to use.
 Say "Final selection: Option A" or "Final selection: Option B" with a justification.
 Your personality is: {personality} — use it to guide your logic and tone.
-"""
+""",
+            llm_config=Config.get_llm_config(use_anyllm=True)
         )
+        if hasattr(agent, "client") and agent.client is not None:
+            try:
+                agent.client.register_model_client(CustomAnyLLMClient)
+            except Exception:
+                pass
+        return agent
     
     @staticmethod
     def create_user_proxy() -> UserProxyAgent:
