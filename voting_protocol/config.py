@@ -3,6 +3,7 @@
 import os
 import logging
 from typing import List
+import httpx
 
 
 class Config:
@@ -14,6 +15,7 @@ class Config:
     
     # AnyLLM Configuration
     ANYLLM_API_KEY = os.environ.get("ANYLLM_API_KEY", "77FMH69-1D84SSQ-KGCGKZT-GA553PH")
+    # ANYLLM_API_BASE = "http://localhost:3001/api/v1/workspace/test-llama3/chat"
     ANYLLM_API_BASE = "http://localhost:3001/api/v1/workspace/test-llama3/chat"
     ANYLLM_MODEL = "Llama3.2"
     
@@ -31,16 +33,16 @@ class Config:
     ]
     
     # Default tasks for testing
-    DEFAULT_TASKS: List[str] = [
-        "Translate 'I love AI' into Japanese"
-    ]
     # DEFAULT_TASKS: List[str] = [
-    #     "Translate 'I love AI' into Japanese",
-    #     "Get current weather in Paris",
-    #     "Summarize this article: 'AI is transforming banking'",
-    #     "Convert 100 USD to EUR",
-    #     "Generate a haiku about neural networks"
+    #     "Translate 'I love AI' into Japanese"
     # ]
+    DEFAULT_TASKS: List[str] = [
+        "Translate 'I love AI' into Japanese",
+        "Get current weather in Paris",
+        "Summarize this article: 'AI is transforming banking'",
+        "Convert 100 USD to EUR",
+        "Generate a haiku about neural networks"
+    ]
     
     # Output file configuration
     SYMBOL_TABLE_FILE = "symbol_table_log.json"
@@ -76,6 +78,8 @@ class Config:
                     "api_key": cls.ANYLLM_API_KEY,
                     "api_type": "open_ai",
                     "model_client_cls": "CustomAnyLLMClient",
+                    "timeout": httpx.Timeout(10.0, read=180.0, write=10.0, pool=60.0),
+                    "retries": 1,
                 }]
             }
         return {

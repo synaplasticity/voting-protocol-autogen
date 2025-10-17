@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 import httpx
+import time
 
 # AutoGen's abstract base model client
 from autogen.oai.client import ModelClient
@@ -29,7 +30,8 @@ class CustomAnyLLMClient(ModelClient):
         self._url = config.get("base_url")
         self._api_key = config.get("api_key")
         self._model = config.get("model")
-        self._timeout = kwargs.get("timeout", 60)
+        self._retries = int(kwargs.get("retries", config.get("retries", 3)))
+        self._timeout = kwargs.get("timeout", config.get("timeout", httpx.Timeout(10.0, read=120.0, write=10.0, pool=60.0)))
 
     class _Msg:
         def __init__(self, content: str):
@@ -76,16 +78,42 @@ class CustomAnyLLMClient(ModelClient):
             "Authorization": f"Bearer {self._api_key}",
             "Content-Type": "application/json",
         }
-        resp = httpx.post(self._url, json=payload, headers=headers, timeout=self._timeout)
-        resp.raise_for_status()
-        data: Dict[str, Any] = {}
-        if resp.headers.get("content-type", "").startswith("application/json"):
+        last_err = None
+        backoff = 1.0
+        for attempt in range(max(1, self._retries)):
             try:
-                data = resp.json()
-            except Exception:
-                data = {}
-        reply = data.get("message") or data.get("response") or data.get("text") or resp.text
-        return CustomAnyLLMClient._Response(reply, self._model or "")
+                resp = httpx.post(self._url, json=payload, headers=headers, timeout=self._timeout)
+                resp.raise_for_status()
+                data: Dict[str, Any] = {}
+                if resp.headers.get("content-type", "").startswith("application/json"):
+                    try:
+                        data = resp.json()
+                    except Exception:
+                        data = {}
+                reply = (
+                    data.get("message")
+                    or data.get("response")
+                    or data.get("textResponse")
+                    or data.get("text")
+                    or resp.text
+                )
+                return CustomAnyLLMClient._Response(reply, self._model or "")
+            except httpx.ReadTimeout as e:
+                last_err = e
+                if attempt < (self._retries - 1):
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, 8.0)
+                    continue
+                raise
+            except httpx.HTTPError as e:
+                # For non-timeout HTTP errors, do not retry unless server error (>=500)
+                status = getattr(e.response, "status_code", None)
+                if status and status >= 500 and attempt < (self._retries - 1):
+                    last_err = e
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, 8.0)
+                    continue
+                raise
 
     def message_retrieval(self, response: Any):
         # Return list of strings; AutoGen will wrap into message dicts as needed
