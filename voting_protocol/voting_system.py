@@ -3,6 +3,8 @@
 import os
 from typing import List
 from autogen import GroupChat, GroupChatManager
+from autogen.oai.client import OpenAIWrapper
+from .anyllm_client import CustomAnyLLMClient
 
 from .config import Config
 from .agents import AgentFactory
@@ -18,6 +20,11 @@ class VotingSystem:
         self.config = Config()
         self.memory = SymbolMemory()
         self.logger = Config.setup_logging()
+
+        try:
+            OpenAIWrapper.register_model_client(CustomAnyLLMClient)
+        except Exception:
+            pass
         
         # Set OpenAI API key
         os.environ["OPENAI_API_KEY"] = self.config.OPENAI_API_KEY
@@ -43,9 +50,21 @@ class VotingSystem:
         groupchat = GroupChat(
             agents=[user, speaker, listener, negotiator],
             messages=[],
-            max_rounds=self.config.MAX_ROUNDS,
+            select_speaker_auto_model_client_cls=CustomAnyLLMClient,
+            select_speaker_auto_llm_config=Config.get_llm_config(use_anyllm=True)
         )
-        manager = GroupChatManager(groupchat=groupchat)
+        #     max_rounds=self.config.MAX_ROUNDS,
+        # )
+        manager = GroupChatManager(
+            groupchat=groupchat,
+            llm_config=Config.get_llm_config(use_anyllm=True)
+        )
+        # Ensure the manager's wrapper activates the custom client
+        try:
+            if hasattr(manager, "client") and manager.client is not None:
+                manager.client.register_model_client(CustomAnyLLMClient)
+        except Exception:
+            pass
         
         # Initiate the voting process
         user.initiate_chat(manager, message=f"Please compress this task: {task}")

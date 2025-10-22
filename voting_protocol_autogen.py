@@ -1,4 +1,6 @@
 from autogen import AssistantAgent, UserProxyAgent, GroupChat, GroupChatManager
+from voting_protocol.config import Config
+from voting_protocol.anyllm_client import CustomAnyLLMClient
 import os
 import json
 from datetime import datetime
@@ -93,63 +95,77 @@ tasks = [
     "Generate a haiku about neural networks"
 ]
 
-# --- LOOP THROUGH TASKS ---
-for task in tasks:
-    speaker = make_speaker()
-    listener = make_listener()
-    negotiator = make_negotiator()
+# --- EXECUTION WRAPPED TO AVOID SIDE EFFECTS ON IMPORT ---
 
-    groupchat = GroupChat(
-        agents=[user, speaker, listener, negotiator],
-        messages=[],
-        max_rounds=6,
-    )
-    manager = GroupChatManager(groupchat=groupchat)
+def run_demo():
+    # LOOP THROUGH TASKS
+    for task in tasks:
+        speaker = make_speaker()
+        listener = make_listener()
+        negotiator = make_negotiator()
 
-    logger.info(f"Running task: {task}")
-    user.initiate_chat(manager, message=f"Please compress this task: {task}")
+        groupchat = GroupChat(  
+            agents=[user, speaker, listener, negotiator],
+            messages=[],
+            max_round=6,
+            select_speaker_auto_model_client_cls=CustomAnyLLMClient,
+            select_speaker_auto_llm_config=Config.get_llm_config(use_anyllm=True),
+        )
+        manager = GroupChatManager(groupchat=groupchat, llm_config=Config.get_llm_config(use_anyllm=True))
 
-    # Extract the final selection and logs from groupchat messages
-    final_selection = None
-    option_a = None
-    option_b = None
-    for msg in groupchat.messages:
-        sender = msg.get("name", "")
-        content = msg.get("content", "")
+        logger.info(f"Running task: {task}")
+        # Ensure the manager's wrapper activates the custom client
+        try:
+            if hasattr(manager, "client") and manager.client is not None:
+                manager.client.register_model_client(CustomAnyLLMClient)
+        except Exception:
+            pass
+        user.initiate_chat(manager, message=f"Please compress this task: {task}")
 
-        if sender == "Speaker" and "Option A:" in content and "Option B:" in content:
-            logger.info(f"Speaker proposals:
-{content}")
-            match_a = re.search(r"Option A:\s*(\w{1,6})", content)
-            if match_a:
-                option_a = match_a.group(1)
-            match_b = re.search(r"Option B:\s*(\w{1,6})", content)
-            if match_b:
-                option_b = match_b.group(1)
+        # Extract the final selection and logs from groupchat messages
+        final_selection = None
+        option_a = None
+        option_b = None
+        for msg in groupchat.messages:
+            sender = msg.get("name", "")
+            content = msg.get("content", "")
 
-        if sender == "Listener" and ("I vote for Option A" in content or "I vote for Option B" in content):
-            logger.info(f"Listener vote: {content}")
+            if sender == "Speaker" and "Option A:" in content and "Option B:" in content:
+                logger.info(f"Speaker proposals:{content}")
+                match_a = re.search(r"Option A:\s*(\w{1,6})", content)
+                if match_a:
+                    option_a = match_a.group(1)
+                match_b = re.search(r"Option B:\s*(\w{1,6})", content)
+                if match_b:
+                    option_b = match_b.group(1)
 
-        if sender == "Negotiator" and "Final selection" in content:
-            logger.info(f"Negotiator decision: {content}")
-            match_final = re.search(r"Final selection:\s*Option (A|B)", content)
-            if match_final:
-                final_option = match_final.group(1)
-                final_selection = option_a if final_option == "A" else option_b
+            if sender == "Listener" and ("I vote for Option A" in content or "I vote for Option B" in content):
+                logger.info(f"Listener vote: {content}")
 
-    if final_selection:
-        timestamp = datetime.now().isoformat()
-        symbol_table.append({
-            "timestamp": timestamp,
-            "task": task,
-            "symbol": final_selection
-        })
-        logger.info(f"Symbol selected: {final_selection}")
-    else:
-        logger.warning("No valid final selection found.")
+            if sender == "Negotiator" and "Final selection" in content:
+                logger.info(f"Negotiator decision: {content}")
+                match_final = re.search(r"Final selection:\s*Option (A|B)", content)
+                if match_final:
+                    final_option = match_final.group(1)
+                    final_selection = option_a if final_option == "A" else option_b
 
-# --- SAVE SYMBOL TABLE ---
-with open("symbol_table_log.json", "w") as f:
-    json.dump(symbol_table, f, indent=2)
+        if final_selection:
+            timestamp = datetime.now().isoformat()
+            symbol_table.append({
+                "timestamp": timestamp,
+                "task": task,
+                "symbol": final_selection
+            })
+            logger.info(f"Symbol selected: {final_selection}")
+        else:
+            logger.warning("No valid final selection found.")
 
-logger.info("Symbol table memory saved to 'symbol_table_log.json'")
+    # SAVE SYMBOL TABLE
+    with open("symbol_table_log.json", "w") as f:
+        json.dump(symbol_table, f, indent=2)
+
+    logger.info("Symbol table memory saved to 'symbol_table_log.json'")
+
+
+if __name__ == "__main__":
+    run_demo()
